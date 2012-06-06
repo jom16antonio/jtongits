@@ -1,0 +1,184 @@
+<?xml version="1.0"?> 
+<project name="TongIts" default="run_with_jad"> 
+	<description> 
+		A template Ant build file for Carbide.j. 
+		For more information about Ant build files go to http://ant.apache.org/. 
+		
+		The user shall define at least the following properties: application and package.dir.dot.
+	</description> 
+	<!-- Source, resource, build and release directories --> 
+	<property name="source.dir" value="src" /> 
+	<property name="resource.dir" value="res" /> 
+	<property name="build.dir" value="bin" /> 
+	<property name="release.dir" value="." /> 
+ 
+	<!-- - - - - - - - - - - - - - - - - - 
+          User definable property declarations 
+         - - - - - - - - - - - - - - - - - --> 
+
+	<!-- The user should REPLACE THE FOLLOWING JAVA PACKAGE
+		declaration including the last dot. 
+		The declaration may be empty if default package 
+		used, and thus not containing dots at all. 
+		The declaration is used in target 'package'. -->
+	<property name="package.dir.dot" value="example.application." /> 
+
+	<!-- The user should REPLACE THE FOLLOWING APPLICATION declaration.
+		The declaration should *not* contain package name -->
+	<property name="application" value="MyMIDlet" /> 
+
+	<echo message="User definable application declaration is: '${application}'."/>
+	<property name="application.jar" value="${release.dir}/${application}.jar" /> 
+	<property name="application.jad" value="${release.dir}/${application}.jad" /> 
+
+	<!-- The user may replace the following slash separated 
+		package declaration to use auto-packaging provided by the emulator. 
+		The declaration may be empty if default package used. 
+		The declaration is used in target 'run_with_class'. -->
+	<property name="package.dir.slash" value="example/application/" /> 
+
+	<!-- Set emulator to use with Carbide.j Ant tasks --> 
+	<property name="ndsj2me.emulator" value="Nokia Prototype SDK 4.0 for Java(tm) ME" /> 
+	<!-- The line below is not necessary, but it 
+		explicitly chooses the device to use. --> 
+	<property name="ndsj2me.device" value="Prototype_4_0_S60_MIDP_Emulator" /> 
+	<echo message="User definable device declaration is: '${ndsj2me.device}'."/>
+
+	<!-- Declare Carbide.j Ant tasks --> 
+	<property name="ndsj2me.home" value="D:/Nokia/Tools/Carbide_j_1_0" /> 
+	<path id="ndsj2me.classpath"> 
+		<fileset file="${ndsj2me.home}/bin/NDS_MIDPToolSet.jar" /> 
+		<fileset dir="${ndsj2me.home}/bin/modules" includes="*.jar" /> 
+		<fileset dir="${ndsj2me.home}/bin/lib" includes="*.jar" /> 
+	</path> 
+ 
+	<!-- Get all task definitions, e.g., ndsj2mejavac and ndsj2mepackage 
+        from properties file located in jar files --> 
+	<taskdef resource="ndsj2me.properties" classpathref="ndsj2me.classpath" /> 
+ 
+	<!-- - - - - - - - - - - - - - - - - - 
+          clean: cleans the build 
+         - - - - - - - - - - - - - - - - - --> 
+	<target name="clean"> 
+		<delete dir="${build.dir}" failonerror="false" /> 
+		<delete file="${application.jad}" failonerror="false" /> 
+		<delete file="${application.jar}" failonerror="false" /> 
+	</target> 
+ 
+	<!-- - - - - - - - - - - - - - - - - - 
+		  init: initializes the project 
+	     - - - - - - - - - - - - - - - - - --> 
+	<target name="init"> 
+		<mkdir dir="${build.dir}" /> 
+		<mkdir dir="${resource.dir}" /> 
+	</target> 
+ 
+	<!-- - - - - - - - - - - - - - - - - - 
+          compile: compiles source files to build directory with debug information 
+	     - - - - - - - - - - - - - - - - - --> 
+	<target name="compile" depends="init" > 
+		<ndsj2mejavac srcdir="${source.dir}" debug="true" destdir="${build.dir}" /> 
+	</target> 
+ 
+	<!-- - - - - - - - - - - - - - - - - - 
+		  package: makes an application package of the classes and resources 
+	     - - - - - - - - - - - - - - - - - --> 
+	<target name="package" depends="compile"> 
+		<echo message="By default the application name is set to: '${application}' and icon to: '${application}.png'" /> 
+		<ndsj2mepackage 
+			classpath="${build.dir}" 
+			resourcedir="${resource.dir}" 
+			name="A template application" 
+			version="1.0.0" 
+			vendor="Forum Nokia" 
+			configuration="CLDC-1.1" 
+			profile="MIDP-2.0" 
+			description="Application MIDlet" 
+			jad="${application.jad}" jar="${application.jar}"> 
+ 
+			<!-- Define on MIDlet --> 
+			<midlet name="${application}" icon="${application}.png" classname="${package.dir.dot}${application}" /> 
+ 
+			<!-- All non-midlet classes and resources are added automatically because 
+			     nested elements 'class' and 'resource' are not used --> 
+		</ndsj2mepackage> 
+	</target> 
+ 
+	<!-- - - - - - - - - - - - - - - - - - 
+		  sign: signs the application package 
+	     - - - - - - - - - - - - - - - - - --> 
+	<target name="sign" depends="package"> 
+		<!-- signs the MIDlet with default key from Carbide.j's key store --> 
+		<ndsj2mesign jad="${application.jad}" alias="default" keypassword="password" /> 
+	</target> 
+ 
+	<!-- - - - - - - - - - - - - - - - - - 
+		  deployftp: deploys application to a local FTP server anonymously 
+	     - - - - - - - - - - - - - - - - - --> 
+	<target name="deployftp" depends="package"> 
+		<ndsj2medeployftp file="${application.jad}" host="127.0.0.1" username="anonymous" 
+			failonerror="false"/> 
+	</target> 
+ 
+	<!-- - - - - - - - - - - - - - - - - - 
+		  deploydevice: deploys application on all devices that are found 
+	     - - - - - - - - - - - - - - - - - --> 
+	<target name="deploydevice" depends="package"> 
+		<ndsj2medeploydevice application="${application.jad}" /> 
+	</target> 
+ 
+	<!-- - - - - - - - - - - - - - - - - - 
+		 run_with_class: runs the main class in the project emulator device 
+		                 and waits for the emulator process to finish. 
+	    - - - - - - - - - - - - - - - - - --> 
+	<target name="run_with_class" depends="compile"> 
+		<ndsj2merun classpath="${build.dir};${resource.dir}" 
+			application="${package.dir.slash}/${application}.class" wait="true"/> 
+	</target> 
+ 
+	<!-- ================================= 
+	      [default target] 
+		 run_with_jad: runs the application package in the project emulator device 
+         ================================= --> 
+	<target name="run_with_jad" depends="package"> 
+		<antcall target="internal_run"> 
+			<param name="device" value="${ndsj2me.device}" /> 
+		</antcall> 
+	</target> 
+ 
+	<!-- - - - - - - - - - - - - - - - - - 
+		 run_all_emulators_with_jad: starts the application in four emulator devices 
+	    - - - - - - - - - - - - - - - - - --> 
+	<target name="run_all_emulators_with_jad" depends="package"> 
+		<antcall target="internal_run"> 
+			<param name="device" value="Prototype_4_0_Nokia_7710_640x200_MIDP_Emulator" /> 
+		</antcall> 
+		<antcall target="internal_run"> 
+			<param name="device" value="Prototype_4_0_S40_128x128_MIDP_Emulator" /> 
+		</antcall> 
+		<antcall target="internal_run"> 
+			<param name="device" value="Prototype_4_0_S40_128x160_MIDP_Emulator" /> 
+		</antcall> 
+		<antcall target="internal_run"> 
+			<param name="device" value="Prototype_4_0_S40_208x208_MIDP_Emulator" /> 
+		</antcall> 
+		<antcall target="internal_run"> 
+			<param name="device" value="Prototype_4_0_S40_240x320_MIDP_Emulator" /> 
+		</antcall> 
+		<antcall target="internal_run"> 
+			<param name="device" value="Prototype_4_0_S60_MIDP_Emulator" /> 
+		</antcall> 
+		<antcall target="internal_run"> 
+			<param name="device" value="Prototype_4_0_S80_640x200_MIDP_Emulator" /> 
+		</antcall> 
+	</target> 
+ 
+	<!-- - - - - - - - - - - - - - - - - - 
+		 internal_run: runs the application package with the device given 
+		               as a parameter 
+	    - - - - - - - - - - - - - - - - - --> 
+	<target name="internal_run"> 
+		<ndsj2merun application="${application.jad}" device="${device}" /> 
+	</target> 
+</project> 
+ 
